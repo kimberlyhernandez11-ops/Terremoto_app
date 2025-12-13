@@ -4,6 +4,7 @@ import plotly.express as px
 from quakefeeds import QuakeFeed
 from datetime import datetime
 import locale 
+import pytz
 
 ####################
 ## Ajuste del layout
@@ -24,6 +25,49 @@ except locale.Error:
     except locale.Error:
         # Fallback si ninguna configuración de español funciona (puede mostrar meses en inglés).
         pass  
+
+# Lista de meses en español para formateo independiente de la configuración del sistema.
+SPANISH_MONTHS = {
+    1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril', 5: 'mayo', 6: 'junio',
+    7: 'julio', 8: 'agosto', 9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre'
+}
+
+def format_spanish_datetime(dt):
+    """Formatea un datetime en español: 'D de <mes> de YYYY, hh:mm:ss a. m./p. m.'"""
+    if dt is None:
+        return ''
+
+    # Asegurar que la hora esté en la zona de Puerto Rico
+    try:
+        tz = pytz.timezone('America/Puerto_Rico')
+        if dt.tzinfo is None:
+            dt = tz.localize(dt)
+        else:
+            dt = dt.astimezone(tz)
+    except Exception:
+        # Si falla la localización, continuar con la fecha tal cual.
+        pass
+
+    day = dt.day
+    month_name = SPANISH_MONTHS.get(dt.month, '')
+    year = dt.year
+    time_str = dt.strftime('%I:%M:%S %p').replace('AM', 'a. m.').replace('PM', 'p. m.')
+
+    return f"{day} de {month_name} de {year}, {time_str}"
+
+
+def filter_df_to_current_month(df, tz_name='America/Puerto_Rico'):
+    """Filtra rows del DataFrame para que pertenezcan al mes y año corrientes
+    en la zona horaria indicada. Se asume que `df['fecha']` es tz-aware o
+    al menos tiene información de fecha que puede usarse con `dt.month`.
+    """
+    try:
+        tz = pytz.timezone(tz_name)
+        now = datetime.now(tz)
+        return df[(df['fecha'].dt.month == now.month) & (df['fecha'].dt.year == now.year)]
+    except Exception:
+        # En caso de error, devolver el DataFrame sin cambios para no romper la app.
+        return df
 
 ###############################
 ## Titulos del app centralizado
@@ -236,7 +280,14 @@ def generaTabla(min_mag_filter, time_period_filter, selected_geo_label, selected
         df['fecha'] = df['fecha'].dt.tz_localize('UTC')
         
     df['fecha'] = df['fecha'].dt.tz_convert('America/Puerto_Rico')
-    df['fecha'] = df['fecha'].dt.strftime('%#d de %B de %Y, %I:%M:%S %p')
+
+    # Si el usuario seleccionó "mes", filtrar solo los eventos del mes y año
+    # corrientes en la zona horaria de Puerto Rico (evita considerar últimos 30 días).
+    if time_period_filter == 'month':
+        df = filter_df_to_current_month(df, tz_name='America/Puerto_Rico')
+
+    # Formatear cada fecha en español usando la función de ayuda para evitar depender de locale.
+    df['fecha'] = df['fecha'].apply(lambda d: format_spanish_datetime(d.to_pydatetime() if hasattr(d, 'to_pydatetime') else d))
     
     #####################################################
     ## Clasificación según la escala de Richter (columna)
@@ -329,7 +380,16 @@ total_events = len(df)
 avg_magnitude = df["mag"].mean() if total_events > 0 else 0
 avg_depth = df["prof"].mean() if total_events > 0 else 0
 # Formatear la fecha de la petición con nombres de meses en español y AM/PM.
-current_date = datetime.now().strftime("%#d de %B de %Y, %I:%M:%S %p")
+# Usar la zona horaria de Puerto Rico para la fecha actual y formatearla en español.
+now = datetime.now()
+try:
+    now = pytz.timezone('America/Puerto_Rico').localize(now)
+except Exception:
+    try:
+        now = now.astimezone(pytz.timezone('America/Puerto_Rico'))
+    except Exception:
+        pass
+current_date = format_spanish_datetime(now)
 
 # Divisor para separar título y estadísticas.
 st.divider()
