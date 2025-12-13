@@ -37,7 +37,7 @@ def format_spanish_datetime(dt):
     if dt is None:
         return ''
 
-    # Asegurar que la hora esté en la zona de Puerto Rico
+    # Asegurar que la hora esté en la zona de Puerto Rico.
     try:
         tz = pytz.timezone('America/Puerto_Rico')
         if dt.tzinfo is None:
