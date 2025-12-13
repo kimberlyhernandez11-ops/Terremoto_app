@@ -36,6 +36,18 @@ token_id = "pk.eyJ1IjoibWVjb2JpIiwiYSI6IjU4YzVlOGQ2YjEzYjE3NTcxOTExZTI2OWY3Y2Y1Z
 
 px.set_mapbox_access_token(token_id)
 
+###########################################################
+## Límites del 'Bounding Box' para la región de Puerto Rico
+###########################################################
+
+# Esto filtra los datos a eventos dentro de esta caja geográfica.
+PR_BOUNDS = {
+    "min_lat": 16.5,
+    "max_lat": 20.0,
+    "min_lon": -68.0,
+    "max_lon": -64.0
+}
+
 #########################
 ## Filtros para Severidad 
 #########################
@@ -141,12 +153,12 @@ st.sidebar.markdown(""" Aplicación desarrollada por:<br> <i>Kimberly M. Hernand
                     unsafe_allow_html=True)
 
 ##################################
-## Obtencion de datos de Terremoto
+## Obtención de datos de Terremoto
 ##################################
 
-def generaTabla(min_mag_filter, time_period_filter):
+def generaTabla(min_mag_filter, time_period_filter, selected_geo_label, selected_severity_label):
     
-    # Se usan ambos filtros en la llamada a QuakeFeed.
+    # Obtención de datos de Terremoto (API) - La API trae >= min_mag.
     feed = QuakeFeed(min_mag_filter, time_period_filter)
     
     longitudes = [feed.location(i)[0] for i in range(len(feed))] # Lista de longitud (Eje X)
@@ -170,28 +182,60 @@ def generaTabla(min_mag_filter, time_period_filter):
     df["lon"] = pd.to_numeric(df["lon"])
     df["mag"] = pd.to_numeric(df["mag"])
     df["prof"] = pd.to_numeric(df["prof"])
+
+    ######################
+    ## Filtro de Severidad
+    ######################
     
+    # Se usa una tolerancia de +/- 0.05 para capturar valores muy cercanos a la magnitud seleccionada.
+    if selected_severity_label in ["1.0", "2.5", "4.5"]:
+        # Convertir la etiqueta seleccionada a flotante
+        exact_mag = float(selected_severity_label)
+        
+        # Definir el rango de tolerancia.
+        tolerance = 0.05 
+        
+        # Filtrar solo si la magnitud está dentro del rango estricto [exact_mag - tolerance, exact_mag + tolerance].
+        df = df[
+            (df['mag'] >= exact_mag - tolerance) & 
+            (df['mag'] <= exact_mag + tolerance)
+        ]
+        
+        # Si es "significativo", se aplica un umbral mínimo (e.g., 5.0).
+    elif selected_severity_label == "significativo":
+        # Se define "significativo" como cualquier evento de magnitud 5.0 o superior.
+        min_significant_mag = 5.0
+        
+        # Filtro para solo mostrar eventos >= 5.0.
+        df = df[df['mag'] >= min_significant_mag]
+    
+    # Aplicar Filtro Geográfico (Puerto Rico Bounding Box)
+    if selected_geo_label == "Puerto Rico":
+        PR_BOUNDS = {
+            "min_lat": 16.5, "max_lat": 20.0,
+            "min_lon": -68.0, "max_lon": -64.0
+        }
+        
+        df = df[
+            (df['lat'] >= PR_BOUNDS['min_lat']) & 
+            (df['lat'] <= PR_BOUNDS['max_lat']) &
+            (df['lon'] >= PR_BOUNDS['min_lon']) &
+            (df['lon'] <= PR_BOUNDS['max_lon'])
+        ]
+        
     ############################################
     ## Filtro para eliminar magnitudes negativas
     ############################################
     
     df = df[df['mag'] >= 0]
 
-    # Asegurar que 'fecha' sea datetime.
+    # Procesamiento de Fecha y Hora 
     df['fecha'] = pd.to_datetime(df['fecha'])
     
-    # Corregir la zona horaria (UTC -> AST):
-    # Comprobación para aplicar tz_localize solo si es tz-naive (no tiene zona horaria).
     if df['fecha'].dt.tz is None:
-        # Si no es consciente (tz-naive), se localiza a UTC (la zona de origen de los datos de USGS).
         df['fecha'] = df['fecha'].dt.tz_localize('UTC')
         
-    # Cuando la columna es tz-aware, se convierte a la hora local de Puerto Rico (AST).
     df['fecha'] = df['fecha'].dt.tz_convert('America/Puerto_Rico')
-    
-    # Se incluye la hora exacta del evento.
-    # '%#d' elimina el cero inicial. '%B' es el nombre completo del mes.
-    # '%I:%M:%S %p' añade la hora, minutos, segundos y AM/PM.
     df['fecha'] = df['fecha'].dt.strftime('%#d de %B de %Y, %I:%M:%S %p')
     
     #####################################################
@@ -213,7 +257,7 @@ def generaTabla(min_mag_filter, time_period_filter):
             return "mayor"
         elif 8.0 <= mag <= 9.9:
             return "épico"
-        else: # 10.0 o más
+        else:
             return "legendario"
     
     df['clasificacion'] = df['mag'].apply(classify_magnitude)
@@ -273,8 +317,8 @@ def generaHistProf(df):
     return fig
 
 
-# Llamada a la función con ambos valores de selectbox.
-df = generaTabla(min_mag_api_value, time_period_api_value)
+# Llamada a la función con valores de selectbox.
+df = generaTabla(min_mag_api_value, time_period_api_value, selected_geo_label, selected_severity_label)
 
 ##########################
 ## Calculo de estadisticas
@@ -332,7 +376,7 @@ if show_table and num_events > 0:
     # Seleccionar y mostrar las columnas requeridas.
     st.dataframe(
         df_to_display[['fecha', 'loc', 'mag', 'clasificacion']].rename(columns={
-            'fecha': 'Fecha y Hora', # Título actualizado
+            'fecha': 'Fecha y Hora', 
             'loc': 'Localización',
             'mag': 'Magnitud',
             'clasificacion': 'Clasificación'
