@@ -1,35 +1,45 @@
 # 🌍 Terremoto App
 
-Aplicación interactiva desarrollada con **Streamlit** que muestra datos en tiempo real sobre terremotos en **Puerto Rico** y en el **mundo**, utilizando la API de USGS a través de la librería `quakefeeds`.
+Aplicación interactiva desarrollada con **Streamlit** que muestra datos en tiempo real sobre terremotos en **Puerto Rico** y en el **mundo** usando la librería `quakefeeds`.
 
-La aplicación está pensada como una herramienta educativa y de divulgación científica, que permite a estudiantes, investigadores y público general visualizar de manera sencilla y atractiva la actividad sísmica reciente. Con una interfaz intuitiva y filtros personalizables, el usuario puede explorar la información de acuerdo con sus intereses.
+Es una herramienta educativa y de divulgación que permite explorar la actividad sísmica reciente con filtros y visualizaciones sencillas.
 
-## ✨ Características principales
+## ✨ Características principales 
 - **Filtros dinámicos**:
-  - Severidad del evento (micro, menor, moderado, fuerte, etc.).
-  - Periodo de tiempo (día, semana, mes).
-  - Zona geográfica (Puerto Rico o mundo).
+  - Severidad (todos, significativo, magnitud específica como `2.5`, `4.5`, `1.0`).
+  - Periodo: `día`, `semana`, `mes` (cuando se selecciona `mes` se muestran únicamente los eventos del mes y año corrientes en la zona horaria de Puerto Rico).
+  - Zona geográfica: `Puerto Rico` o `Mundo` (bounding box para PR).
 - **Visualizaciones interactivas**:
-  - Mapa con eventos sísmicos en tiempo real (Mapbox).
+  - Mapa con eventos (Mapbox) y popups con magnitud, profundidad y fecha.
   - Histogramas de magnitudes y profundidades.
 - **Tabla de eventos**:
-  - Lista de los últimos terremotos con fecha, localización, magnitud y clasificación según la escala de Richter.
-- **Estadísticas rápidas**:
-  - Cantidad total de eventos.
-  - Promedio de magnitudes.
-  - Promedio de profundidades.
+  - Muestra fecha y hora (formateadas en español, p. ej. `5 de marzo de 2023, 02:30:00 p. m.`), localización, magnitud y clasificación.
+- **Formato y localización**:
+  - Los nombres de mes se muestran en español de forma consistente (no dependen del locale del sistema).
+  - Fechas y hora se muestran en la zona horaria `America/Puerto_Rico`.
 - **Clasificación automática**:
-  - Cada evento se categoriza en niveles como *micro*, *menor*, *moderado*, *fuerte*, *mayor*, *épico* o *legendario*.
+  - Cada evento se etiqueta como *micro*, *menor*, *ligero*, *moderado*, *fuerte*, *mayor*, *épico* o *legendario* según la magnitud.
+
+## 🧪 Pruebas
+- Se incluye una prueba simple `tests/test_filters.py` que verifica el filtrado por mes corriente.
 
 ## 📋 Requisitos
-- Python 3.8 o superior.
-- Librerías necesarias:
-  - `streamlit`
-  - `pandas`
-  - `plotly`
-  - `quakefeeds`
-  - `locale`
+- Python 3.8 o superior
+- Dependencias (ver `requirements.txt`): `streamlit`, `pandas`, `plotly`, `quakefeeds`, `pytz`, `tzdata`, entre otras.
 
 Instalación rápida:
 ```bash
-pip install streamlit pandas plotly quakefeeds
+pip install -r requirements.txt
+```
+
+Ejecutar la aplicación:
+```bash
+streamlit run streamlit_app.py
+```
+
+Ejecutar pruebas:
+```bash
+python -m pytest -q
+```
+
+Si encuentras algún comportamiento inesperado al seleccionar `mes`, `Puerto Rico` y una severidad concreta (ej. `2.5`), la app ahora filtra para mostrar solo eventos del mes en curso en la zona horaria de Puerto Rico.
