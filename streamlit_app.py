@@ -3,107 +3,126 @@ import pandas as pd
 import plotly.express as px
 from quakefeeds import QuakeFeed
 from datetime import datetime
-import locale # Importar el módulo locale
+import locale 
 
-# Configurar la página para usar el ancho completo
+####################
+## Ajuste del layout
+#################### 
 st.set_page_config(layout="wide")
 
+###############
+## Localizacion
+###############
+
 # Configurar la localización a español para el formato de fecha.
-# Esto asegura que los nombres de los meses salgan en español (e.g., Noviembre en lugar de November).
 try:
     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
 except locale.Error:
-    # Si 'es_ES.UTF-8' no está disponible (común en algunos entornos), probar con otras variantes
+    # Si 'es_ES.UTF-8' no está disponible, probar con otras variantes.
     try:
         locale.setlocale(locale.LC_TIME, 'es_ES')
     except locale.Error:
-        # Fallback si ninguna configuración de español funciona (puede mostrar meses en inglés)
+        # Fallback si ninguna configuración de español funciona (puede mostrar meses en inglés).
         pass  
 
+###############################
+## Titulos del app centralizado
+###############################
 
-# --- TÍTULOS CENTRALIZADOS ---
 st.markdown("<h1 style='text-align: center; '>Terremoto App</h1>", unsafe_allow_html=True) 
 st.markdown("<h2 style='text-align: center;'>Datos en Tiempo Real de los Terremotos en Puerto Rico y en el Mundo</h2>", unsafe_allow_html=True)
 
-token_id = "pk.eyJ1IjoibWVjb2JpIiwiYSI6IjU4YzVlOGQ2YjEzYjE3NTcxOTExZTI2OWY3Y2Y1ZGYxIn0.LUg7xQhGH2uf3zA57szCyw"
+token_id = "pk.eyJ1IjoibWVjb2JpIiwiYSI6IjU4YzVlOGQ2YjEzYjE3NTcxOTExZTI2OWY3Y2Y1ZGYxIn0.LUg7xQhGH2uf3zA57szCyw" # Toke id de Mapbox
 
 px.set_mapbox_access_token(token_id)
 
-# --- Filtro de Magnitud Mínima ---
+#########################
+## Filtros para Severidad 
+#########################
 
-# Diccionario para mapear las etiquetas de la interfaz (en español) a los valores de la API (en inglés)
+# Diccionario para mapear las etiquetas de la interfaz (en español) a los valores de la API (en inglés).
 severity_options = {
-    "todos": "all", # Etiqueta simplificada
+    "todos": "all", 
     "significativo": "significant",
     "4.5": "4.5",
     "2.5": "2.5",
     "1.0": "1.0"
 }
 
-# Selectbox en la barra lateral para elegir la severidad
+# Selectbox en la barra lateral para elegir la severidad.
 selected_severity_label = st.sidebar.selectbox(
-    "Selecciona la Magnitud Mínima:",
+    "Severidad:",
     list(severity_options.keys()),
-    index=0 # 'todos' como default
+    index=0 
 )
 
-# Obtener el valor de la API correspondiente
+# Obtener el valor de la API correspondiente.
 min_mag_api_value = severity_options[selected_severity_label]
 
-st.sidebar.divider() # Divisor después del filtro de Magnitud
+st.sidebar.divider() # Divisor después del filtro de Severidad.
 
-# --- Filtro de Periodo de Tiempo ---
+#######################
+## Filtros para Periodo
+#######################
 
-# Diccionario para mapear las etiquetas de tiempo (en español) a los valores de la API (en inglés)
+# Diccionario para mapear las etiquetas de tiempo (en español) a los valores de la API (en inglés).
 time_options = {
-    "mes": "month", # Etiqueta simplificada
+    "mes": "month", 
     "semana": "week",
     "día": "day"
 }
 
-# Selectbox en la barra lateral para elegir el periodo de tiempo
+# Selectbox en la barra lateral para elegir el periodo.
 selected_time_label = st.sidebar.selectbox(
-    "Selecciona el Periodo de Tiempo:",
+    "Periodo:",
     list(time_options.keys()),
-    index=0 # 'mes' como default
+    index=0 
 )
 
-# Obtener el valor de la API correspondiente
+# Obtener el valor de la API correspondiente.
 time_period_api_value = time_options[selected_time_label]
 
-st.sidebar.divider() # Divisor después del filtro de Periodo
+st.sidebar.divider() # Divisor después del filtro de Periodo.
 
-# --- Filtro de Zona Geográfica ---
+###############################
+## Filtros para Zona Geográfica 
+###############################
 
-# Diccionario para mapear las etiquetas de zona a sus parámetros de mapa (lat, lon, zoom)
+# Diccionario para mapear las etiquetas de zona a sus parámetros de mapa (lat, lon, zoom).
 geo_options = {
     "Puerto Rico": {"lat": 18.25178, "lon": -66.254512, "zoom": 7.5},
     "Mundo": {"lat": 0, "lon": 0, "zoom": 1.0}
 }
 
-# Selectbox en la barra lateral para elegir la zona geográfica
+# Selectbox en la barra lateral para elegir la zona geográfica.
 selected_geo_label = st.sidebar.selectbox(
-    "Selecciona la Zona Geográfica:",
+    "Zona Geográfica:",
     list(geo_options.keys()),
-    index=0 # 'Puerto Rico' como default
+    index=0 
 )
 
-# Obtener los parámetros de centro y zoom
+# Obtener los parámetros de centro y zoom.
 map_params = geo_options[selected_geo_label]
 
-st.sidebar.divider() # Divisor después del filtro de Zona Geográfica
+st.sidebar.divider() # Divisor después del filtro de Zona Geográfica.
 
-# --- Checkbox para Mostrar Mapa ---
+#############################
+## Checkbox para Mostrar Mapa
+#############################
+
 show_map = st.sidebar.checkbox("Mostrar Mapa", value=True)
 
-st.sidebar.divider() # Divisor después del checkbox de Mapa
+st.sidebar.divider() # Divisor después del checkbox de Mapa.
 
-# --- Checkbox y Slider para Mostrar Tabla ---
+#######################################
+## Checkbox y Slider para Mostrar Tabla
+#######################################
+
 show_table = st.sidebar.checkbox("Mostrar tabla con eventos", value=False)
 
 num_events = 0
 if show_table:
-    # Slider que aparece solo si el checkbox está marcado
+    # Slider que aparece solo si el checkbox está marcado.
     num_events = st.sidebar.slider(
         "Cantidad de eventos a mostrar (Tabla):",
         min_value=5,
@@ -112,63 +131,73 @@ if show_table:
         step=1
     )
 
-# --- Información del Desarrollador ---
-st.sidebar.divider() # Añade un separador visual antes de la información
-st.sidebar.markdown(""" Aplicacion desarrollada por:<br> <i>Kimberly M. Hernandez <br>
+################################
+## Información del Desarrollador
+################################
+
+st.sidebar.divider() # Añade un separador visual antes de la información.
+st.sidebar.markdown(""" Aplicación desarrollada por:<br> <i>Kimberly M. Hernandez <br>
                      INGE3016<br>Universidad de Puerto Rico</i>""",
                     unsafe_allow_html=True)
 
+##################################
+## Obtencion de datos de Terremoto
+##################################
 
 def generaTabla(min_mag_filter, time_period_filter):
     
-    # Se usan ambos filtros en la llamada a QuakeFeed
+    # Se usan ambos filtros en la llamada a QuakeFeed.
     feed = QuakeFeed(min_mag_filter, time_period_filter)
-
-    longitudes = [feed.location(i)[0] for i in range(len(feed))]
     
-    latitudes = [feed.location(i)[1] for i in range(len(feed))]
+    longitudes = [feed.location(i)[0] for i in range(len(feed))] # Lista de longitud (Eje X)
     
-    date = list(feed.event_times)
+    latitudes = [feed.location(i)[1] for i in range(len(feed))] # Lista de latitud (Eje Y)
     
-    depths = list(feed.depths)
+    date = list(feed.event_times) # Lista de las fechas y horas del evento
     
-    places = list(feed.places)
+    depths = list(feed.depths) # Lista de las profundidades (en km)
     
-    magnitudes = list(feed.magnitudes)
+    places = list(feed.places) # Lista de las ubicaciones
     
-    df = pd.DataFrame([date,longitudes,latitudes,places,magnitudes,depths]).transpose()
+    magnitudes = list(feed.magnitudes) # Lista de las magnitudes (escala Richter)
     
-    df.columns = ["fecha","lon","lat","loc","mag","prof"]
+    df = pd.DataFrame([date,longitudes,latitudes,places,magnitudes,depths]).transpose() # Creación del DataFrame Inicial
     
-    # Conversión a numérico (como estaba originalmente)
+    df.columns = ["fecha","lon","lat","loc","mag","prof"] # Nombres de columnas
+    
+    # Conversión a numérico.
     df["lat"] = pd.to_numeric(df["lat"])
     df["lon"] = pd.to_numeric(df["lon"])
     df["mag"] = pd.to_numeric(df["mag"])
     df["prof"] = pd.to_numeric(df["prof"])
     
-    # --- FILTRO PARA ELIMINAR MAGNITUDES NEGATIVAS ---
-    # Esto resuelve el error en Plotly ya que 'size' debe ser positivo.
+    ############################################
+    ## Filtro para eliminar magnitudes negativas
+    ############################################
+    
     df = df[df['mag'] >= 0]
 
-    # 1. Asegurar que 'fecha' sea datetime
+    # Asegurar que 'fecha' sea datetime.
     df['fecha'] = pd.to_datetime(df['fecha'])
     
-    # 2. Corregir la zona horaria (UTC -> AST):
-    # El error "Already tz-aware" ocurre si tz_localize se llama en una serie que ya tiene zona horaria.
-    # Se añade una comprobación para aplicar tz_localize solo si es tz-naive (no tiene zona horaria).
+    # Corregir la zona horaria (UTC -> AST):
+    # Comprobación para aplicar tz_localize solo si es tz-naive (no tiene zona horaria).
     if df['fecha'].dt.tz is None:
-        # Si no es consciente (tz-naive), la localizamos a UTC (la zona de origen de los datos de USGS)
+        # Si no es consciente (tz-naive), se localiza a UTC (la zona de origen de los datos de USGS).
         df['fecha'] = df['fecha'].dt.tz_localize('UTC')
         
-    # Ahora que la columna es definitivamente tz-aware, la convertimos a la hora local de Puerto Rico (AST).
+    # Cuando la columna es tz-aware, se convierte a la hora local de Puerto Rico (AST).
     df['fecha'] = df['fecha'].dt.tz_convert('America/Puerto_Rico')
     
-    # ACTUALIZACIÓN: Incluir la hora exacta del evento
+    # Se incluye la hora exacta del evento.
     # '%#d' elimina el cero inicial. '%B' es el nombre completo del mes.
     # '%I:%M:%S %p' añade la hora, minutos, segundos y AM/PM.
     df['fecha'] = df['fecha'].dt.strftime('%#d de %B de %Y, %I:%M:%S %p')
     
-    # 3. Añadir la columna de Clasificación según la escala de Richter
+    #####################################################
+    ## Clasificación según la escala de Richter (columna)
+    #####################################################
+    
     def classify_magnitude(mag):
         if mag < 2.0:
             return "micro"
@@ -191,9 +220,12 @@ def generaTabla(min_mag_filter, time_period_filter):
     
     return df
 
+#################################
+## Mapa de Puerto Rico y el mundo
+#################################
+
 def generaMapa(df, map_params):
 
-    # CAMBIO: Se usa una escala de color sequential (Magma) para reflejar mejor la intensidad (rojo = fuerte)
     fig = px.scatter_mapbox(df,
                             lat="lat",
                             lon="lon",
@@ -205,50 +237,63 @@ def generaMapa(df, map_params):
                                         "lat":True,
                                         "lon":True,
                                         "fecha":True},
-                            color_continuous_scale=px.colors.cyclical.IceFire, # Nueva escala de color
+                            color_continuous_scale=px.colors.cyclical.IceFire, 
                             size_max=8,
-                            opacity=0.5, # Aumenta un poco la opacidad para Magma
+                            opacity=0.5,
                             center=dict(lat=map_params["lat"], lon=map_params["lon"]), # Centro dinámico
                             mapbox_style="dark", 
                             zoom=map_params["zoom"]) # Zoom dinámico
     
     return fig
 
+###########################
+## Histograma de magnitudes
+###########################
+
 def generaHistMag(df):
     
-    # Se agrega el parámetro 'labels' para cambiar el nombre del eje x
     fig = px.histogram(df,
                         x="mag",
                         color_discrete_sequence=["red"],
-                        labels={"mag": "Magnitudes"}) # Eje X actualizado
+                        labels={"mag": "Magnitudes"}) 
     
     return fig
+
+##############################
+## Histograma de profundidades
+##############################
 
 def generaHistProf(df):
     
     fig = px.histogram(df,
                         x="prof",
                         color_discrete_sequence=["red"],
-                        labels={"prof": "Profundidades"}) # Eje X actualizado
+                        labels={"prof": "Profundidades"}) 
     
     return fig
 
 
-# Llamada a la función con ambos valores de selectbox
+# Llamada a la función con ambos valores de selectbox.
 df = generaTabla(min_mag_api_value, time_period_api_value)
 
-# --- CÁLCULO DE ESTADÍSTICAS ---
+##########################
+## Calculo de estadisticas
+##########################
+
 total_events = len(df)
-# Prevenir error si no hay eventos después del filtro
+# Prevenir error si no hay eventos después del filtro.
 avg_magnitude = df["mag"].mean() if total_events > 0 else 0
 avg_depth = df["prof"].mean() if total_events > 0 else 0
 # Formatear la fecha de la petición con nombres de meses en español y AM/PM.
 current_date = datetime.now().strftime("%#d de %B de %Y, %I:%M:%S %p")
 
-# Divisor solicitado para separar título y estadísticas
+# Divisor para separar título y estadísticas.
 st.divider()
 
-# --- Estadísticas (Formato Centralizado SIN RECUADRO) ---
+######################################
+## Estadísticas (Formato Centralizado)
+######################################
+ 
 col_left, col_center, col_right = st.columns([1, 1.5, 1])
 
 with col_center:
@@ -265,60 +310,60 @@ with col_center:
         st.markdown(stats_html, unsafe_allow_html=True)
 
 
-# Divisor para separar estadísticas de la tabla/mapa
+# Divisor para separar estadísticas de la tabla/mapa.
 st.divider()
 
-# --- Tabla DataFrame (Debajo de las estadísticas) ---
+###############################################
+## Tabla DataFrame (Debajo de las estadísticas)
+###############################################
 
-# Se muestra la tabla de datos si el checkbox está marcado 
+# Se muestra la tabla de datos si el checkbox está marcado.
 if show_table and num_events > 0:
     
-    # 1. Tomar los primeros N eventos
+    # Tomar los primeros N eventos.
     df_to_display = df.head(num_events).copy()
     
-    # 2. Resetear el índice para que empiece en 0
-    # drop=False mantiene la columna de índice actual (0, 1, 2, ...)
+    # Resetear el índice para que empiece en 0.
     df_to_display = df_to_display.reset_index(drop=True)
     
-    # 3. Sumarle 1 al índice para que empiece en 1
+    # Sumarle 1 al índice para que empiece en 1
     df_to_display.index = df_to_display.index + 1
     
-    # 4. Seleccionar, renombrar y mostrar solo las columnas requeridas
+    # Seleccionar y mostrar las columnas requeridas.
     st.dataframe(
         df_to_display[['fecha', 'loc', 'mag', 'clasificacion']].rename(columns={
-            'fecha': 'Fecha y Hora (AST)', # Título actualizado
+            'fecha': 'Fecha y Hora', # Título actualizado
             'loc': 'Localización',
             'mag': 'Magnitud',
             'clasificacion': 'Clasificación'
         }),
-        use_container_width=True # Ajustar la tabla al ancho del contenedor
+        use_container_width=True # Ajustar la tabla al ancho del contenedor.
     )
     
-    st.divider() # Divisor después de la tabla
+    st.divider() # Divisor después de la tabla.
 
-# --- Mapa e Histogramas (Estructura de tres columnas para alineación horizontal) ---
+##############################################################################
+## Mapa e Histogramas (Estructura de tres columnas para alineación horizontal)
+##############################################################################
 
-# Chequear si hay datos para graficar
+# Chequear si hay datos para graficar.
 if total_events > 0: 
     
-    # Columnas: Hist. Mag (1.5), Hist. Prof (1.5), Mapa (3) -> Ratio ajustado a [1.5, 1.5, 3] (25%, 25%, 50%)
+    # Columnas: Hist. Mag (1.5), Hist. Prof (1.5), Mapa (3) -> Ratio ajustado a [1.5, 1.5, 3] (25%, 25%, 50%).
     hist_mag_col, hist_prof_col, map_container = st.columns([1.5, 1.5, 3])
 
     with hist_mag_col:
         # Encabezado centralizado y pequeño (h6)
         st.markdown("<h6 style='text-align: center;'>Histograma de Magnitudes</h6>", unsafe_allow_html=True)
-        # CAMBIO CLAVE: Usar st.plotly_chart()
         st.plotly_chart(generaHistMag(df), use_container_width=True)
 
     with hist_prof_col:
-        # Encabezado centralizado y pequeño (h6)
+        # Encabezado centralizado.
         st.markdown("<h6 style='text-align: center;'>Histograma de Profundidades</h6>", unsafe_allow_html=True)
-        # CAMBIO CLAVE: Usar st.plotly_chart()
         st.plotly_chart(generaHistProf(df), use_container_width=True)
 
     with map_container:
         if show_map:
-            # CAMBIO CLAVE: Usar st.plotly_chart()
             st.plotly_chart(generaMapa(df, map_params), use_container_width=True)
 
 else:
