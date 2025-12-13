@@ -26,6 +26,10 @@ except locale.Error:
         # Fallback si ninguna configuración de español funciona (puede mostrar meses en inglés).
         pass  
 
+###############################    
+## Formateo de fecha en español
+###############################
+
 # Lista de meses en español para formateo independiente de la configuración del sistema.
 SPANISH_MONTHS = {
     1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril', 5: 'mayo', 6: 'junio',
