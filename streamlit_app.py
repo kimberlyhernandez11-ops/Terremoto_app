@@ -12,7 +12,7 @@ import pytz
 st.set_page_config(layout="wide")
 
 ###############
-## Localizacion
+## Localización
 ###############
 
 # Configurar la localización a español para el formato de fecha.
@@ -77,7 +77,6 @@ def filter_df_to_current_month(df, tz_name='America/Puerto_Rico'):
 ## Titulos del app centralizado
 ###############################
 
-st.markdown("<h1 style='text-align: center; '>Terremoto App</h1>", unsafe_allow_html=True) 
 st.markdown("<h2 style='text-align: center;'>Datos en Tiempo Real de los Terremotos en Puerto Rico y en el Mundo</h2>", unsafe_allow_html=True)
 
 token_id = "pk.eyJ1IjoibWVjb2JpIiwiYSI6IjU4YzVlOGQ2YjEzYjE3NTcxOTExZTI2OWY3Y2Y1ZGYxIn0.LUg7xQhGH2uf3zA57szCyw" # Toke id de Mapbox
@@ -356,6 +355,9 @@ def generaHistMag(df):
                         color_discrete_sequence=["red"],
                         labels={"mag": "Magnitudes"}) 
     
+    fig.update_xaxes(showline=True, linewidth=1, linecolor="black", mirror=True)
+    fig.update_yaxes(showline=True, linewidth=1, linecolor="black", mirror=True)
+    
     return fig
 
 ##############################
@@ -368,6 +370,9 @@ def generaHistProf(df):
                         x="prof",
                         color_discrete_sequence=["red"],
                         labels={"prof": "Profundidades"}) 
+    
+    fig.update_xaxes(showline=True, linewidth=1, linecolor="black", mirror=True)
+    fig.update_yaxes(showline=True, linewidth=1, linecolor="black", mirror=True)
     
     return fig
 
